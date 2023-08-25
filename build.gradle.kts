@@ -10,7 +10,7 @@ tasks.withType<KotlinCompile>().configureEach {
 }
 
 group = "com.github.replaymod"
-version = "SNAPSHOT"
+version = "0.1.0"
 
 repositories {
     mavenCentral()
@@ -46,6 +46,39 @@ publishing {
     publications {
         create("maven", MavenPublication::class) {
             from(components["java"])
+        }
+    }
+
+    val publishingUsername: String? = run {
+        return@run project.findProperty("deftu.publishing.username")?.toString() ?: System.getenv("DEFTU_PUBLISHING_USERNAME")
+    }
+
+    val publishingPassword: String? = run {
+        return@run project.findProperty("deftu.publishing.password")?.toString() ?: System.getenv("DEFTU_PUBLISHING_PASSWORD")
+    }
+
+    repositories {
+        mavenLocal()
+        if (publishingUsername != null && publishingPassword != null) {
+            fun MavenArtifactRepository.applyCredentials() {
+                authentication.create<BasicAuthentication>("basic")
+                credentials {
+                    username = publishingUsername
+                    password = publishingPassword
+                }
+            }
+
+            maven {
+                name = "DeftuReleases"
+                url = uri("https://maven.deftu.xyz/releases")
+                applyCredentials()
+            }
+
+            maven {
+                name = "DeftuSnapshots"
+                url = uri("https://maven.deftu.xyz/snapshots")
+                applyCredentials()
+            }
         }
     }
 }
