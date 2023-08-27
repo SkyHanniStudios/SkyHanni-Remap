@@ -10,7 +10,7 @@ tasks.withType<KotlinCompile>().configureEach {
 }
 
 group = "com.github.replaymod"
-version = "0.1.0"
+version = "0.1.1"
 
 repositories {
     mavenCentral()
