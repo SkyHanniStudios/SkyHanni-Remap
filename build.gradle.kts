@@ -9,7 +9,7 @@ tasks.withType<KotlinCompile>().configureEach {
     kotlinOptions.jvmTarget = "1.8"
 }
 
-group = "com.github.replaymod"
+group = "dev.deftu"
 version = "0.1.1"
 
 repositories {
