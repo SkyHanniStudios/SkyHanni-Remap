@@ -10,7 +10,7 @@ tasks.withType<KotlinCompile>().configureEach {
 }
 
 group = "dev.deftu"
-version = "0.1.2"
+version = "0.1.5"
 
 repositories {
     mavenCentral()
