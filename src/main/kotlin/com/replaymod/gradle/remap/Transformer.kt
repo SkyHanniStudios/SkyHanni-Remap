@@ -72,11 +72,7 @@ class Transformer(private val map: MappingSet) {
             config.put(CommonConfigurationKeys.MODULE_NAME, "main")
             jdkHome?.let {config.setupJdk(it) }
             config.add<ContentRoot>(CLIConfigurationKeys.CONTENT_ROOTS, JavaSourceRoot(tmpDir.toFile(), ""))
-            val kotlinSourceRoot = try {
-                kotlinSourceRoot1521(tmpDir.toAbsolutePath().toString(), false)
-            } catch (e: NoSuchMethodError) {
-                kotlinSourceRoot190(tmpDir.toAbsolutePath().toString(), false)
-            }
+            val kotlinSourceRoot = createSourceRoot(tmpDir, false)
             config.add<ContentRoot>(CLIConfigurationKeys.CONTENT_ROOTS, kotlinSourceRoot)
             config.addAll<ContentRoot>(CLIConfigurationKeys.CONTENT_ROOTS, classpath!!.map { JvmClasspathRoot(File(it)) })
             config.put<MessageCollector>(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, PrintingMessageCollector(System.err, MessageRenderer.GRADLE_STYLE, true))
@@ -103,11 +99,7 @@ class Transformer(private val map: MappingSet) {
             val psiFiles = virtualFiles.mapValues { psiManager.findFile(it.value)!! }
             val ktFiles = psiFiles.values.filterIsInstance<KtFile>()
 
-            val analysis = try {
-                analyze1521(environment, ktFiles)
-            } catch (e: NoSuchMethodError) {
-                analyze1620(environment, ktFiles)
-            }
+            val analysis = analyze(environment, ktFiles)
 
             val remappedEnv = remappedClasspath?.let {
                 setupRemappedProject(disposable, it, processedTmpDir)
