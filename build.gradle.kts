@@ -1,16 +1,13 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    kotlin("jvm") version "1.9.23"
+    kotlin("jvm") version("2.0.0")
     `maven-publish`
 }
 
-tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
 group = "dev.deftu"
-version = "0.1.5"
+version = "0.2.0"
 
 repositories {
     mavenCentral()
@@ -23,6 +20,7 @@ val testB by sourceSets.creating
 kotlinVersion("1.5.21", isPrimaryVersion = true)
 kotlinVersion("1.6.20")
 kotlinVersion("1.9.0")
+kotlinVersion("2.0.0")
 
 dependencies {
     api("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.5.21")
@@ -36,6 +34,25 @@ dependencies {
     testRuntimeOnly(testA.output)
     testRuntimeOnly(testB.output)
     testRuntimeOnly("org.spongepowered:mixin:0.8.4")
+}
+
+tasks {
+    jar {
+        archiveBaseName.set("remap")
+    }
+
+    kotlin {
+        @Suppress("DEPRECATION")
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_1_8)
+            apiVersion.set(KotlinVersion.KOTLIN_1_5)
+            languageVersion.set(KotlinVersion.KOTLIN_1_5)
+        }
+    }
+
+    test {
+        useJUnitPlatform()
+    }
 }
 
 tasks.named<Jar>("jar") {
@@ -80,17 +97,6 @@ publishing {
                 applyCredentials()
             }
         }
-    }
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        apiVersion = "1.5"
-        languageVersion = "1.5"
     }
 }
 
