@@ -177,11 +177,8 @@ class Transformer(private val map: MappingSet) {
             config,
             EnvironmentConfigFiles.JVM_CONFIG_FILES
         )
-        try {
-            analyze1521(environment, emptyList())
-        } catch (e: NoSuchMethodError) {
-            analyze1620(environment, emptyList())
-        }
+
+        analyze(environment, emptyList())
         return environment
     }
 
