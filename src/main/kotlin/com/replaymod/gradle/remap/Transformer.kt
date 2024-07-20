@@ -46,6 +46,7 @@ class Transformer(private val map: MappingSet) {
     var remappedJdkHome: File? = null
     var patternAnnotation: String? = null
     var manageImports = false
+    var verboseCompilerMessages = false
 
     @Throws(IOException::class)
     fun remap(sources: Map<String, String>): Map<String, Pair<String, List<Pair<Int, String>>>> =
@@ -75,7 +76,7 @@ class Transformer(private val map: MappingSet) {
             val kotlinSourceRoot = createSourceRoot(tmpDir, false)
             config.add<ContentRoot>(CLIConfigurationKeys.CONTENT_ROOTS, kotlinSourceRoot)
             config.addAll<ContentRoot>(CLIConfigurationKeys.CONTENT_ROOTS, classpath!!.map { JvmClasspathRoot(File(it)) })
-            config.put<MessageCollector>(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, PrintingMessageCollector(System.err, MessageRenderer.GRADLE_STYLE, true))
+            config.put<MessageCollector>(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, PrintingMessageCollector(System.err, MessageRenderer.GRADLE_STYLE, verboseCompilerMessages))
 
             // Our PsiMapper only works with the PSI tree elements, not with the faster (but kotlin-specific) classes
             config.put(JVMConfigurationKeys.USE_PSI_CLASS_FILES_READING, true)
@@ -170,7 +171,7 @@ class Transformer(private val map: MappingSet) {
         if (manageImports) {
             config.add(CLIConfigurationKeys.CONTENT_ROOTS, JavaSourceRoot(sourceRoot.toFile(), ""))
         }
-        config.put(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, PrintingMessageCollector(System.err, MessageRenderer.GRADLE_STYLE, true))
+        config.put(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, PrintingMessageCollector(System.err, MessageRenderer.GRADLE_STYLE, verboseCompilerMessages))
 
         val environment = KotlinCoreEnvironment.createForProduction(
             disposable,
