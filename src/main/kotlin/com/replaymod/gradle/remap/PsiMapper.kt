@@ -42,6 +42,7 @@ internal class PsiMapper(
         private val patterns: PsiPatterns?
 ) {
     private val mixinMappings = mutableMapOf<String, ClassMapping<*, *>>()
+    private val aliased = mutableSetOf<String>()
     private val errors = mutableListOf<Pair<Int, String>>()
     private val changes = TreeMap<TextRange, String>(compareBy<TextRange> { it.startOffset }.thenBy { it.endOffset })
 
@@ -386,6 +387,11 @@ internal class PsiMapper(
             }
             return
         }
+
+        if (qualifierExpr == null && expr.text in aliased) {
+            return
+        }
+
         // FIXME this incorrectly filters things like "Packet<?>" and doesn't filter same-name type aliases
         // if (expr.text != name.substring(name.lastIndexOf('.') + 1)) {
         //     return // type alias, will be remapped at its definition
@@ -651,6 +657,15 @@ internal class PsiMapper(
     }
 
     fun remapFile(): Pair<String, List<Pair<Int, String>>> {
+        if (file is KtFile) {
+            for (importDirective in file.importDirectives) {
+                val alias = importDirective.aliasName
+                if (alias != null) {
+                    aliased.add(alias)
+                }
+            }
+        }
+
         if (patterns != null) {
             file.accept(object : JavaRecursiveElementVisitor() {
                 override fun visitCodeBlock(block: PsiCodeBlock) {
