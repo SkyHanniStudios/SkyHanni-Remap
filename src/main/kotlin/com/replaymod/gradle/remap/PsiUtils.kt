@@ -41,8 +41,12 @@ internal val PsiAnnotationMemberValue.resolvedLiteralValues: List<Pair<PsiLitera
         else -> listOfNotNull(resolvedLiteralValue)
     }
 
+internal class MethodSignatureException(val method: PsiMethod, cause: Exception)
+	: Exception("Failed to resolve signature of method $method in ${method.containingFile}", cause)
+
 internal object PsiUtils {
-    fun getSignature(method: PsiMethod): MethodSignature = MethodSignature(method.name, getDescriptor(method))
+    fun getSignature(method: PsiMethod): MethodSignature = runCatching {  MethodSignature(method.name, getDescriptor(method)) }
+	    .getOrElse { throw MethodSignatureException(method, it as Exception) }
 
     private fun getDescriptor(method: PsiMethod): MethodDescriptor = MethodDescriptor(
             method.parameterList.parameters.map { getFieldType(it.type) },
