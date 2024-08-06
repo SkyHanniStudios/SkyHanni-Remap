@@ -70,33 +70,10 @@ publishing {
         return@run project.findProperty("deftu.publishing.username")?.toString() ?: System.getenv("DEFTU_PUBLISHING_USERNAME")
     }
 
-    val publishingPassword: String? = run {
-        return@run project.findProperty("deftu.publishing.password")?.toString() ?: System.getenv("DEFTU_PUBLISHING_PASSWORD")
-    }
-
-    repositories {
-        mavenLocal()
-        if (publishingUsername != null && publishingPassword != null) {
-            fun MavenArtifactRepository.applyCredentials() {
-                authentication.create<BasicAuthentication>("basic")
-                credentials {
-                    username = publishingUsername
-                    password = publishingPassword
-                }
-            }
-
-            maven {
-                name = "DeftuReleases"
-                url = uri("https://maven.deftu.dev/releases")
-                applyCredentials()
-            }
-
-            maven {
-                name = "DeftuSnapshots"
-                url = uri("https://maven.deftu.dev/snapshots")
-                applyCredentials()
-            }
-        }
+tasks.withType<KotlinCompile> {
+    compilerOptions {
+        apiVersion.set(KotlinVersion.KOTLIN_1_8)
+        apiVersion.set(KotlinVersion.KOTLIN_1_8)
     }
 }
 
