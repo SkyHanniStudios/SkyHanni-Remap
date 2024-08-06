@@ -1,13 +1,13 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version("2.0.0")
-    `maven-publish`
+    val dgtVersion = "2.5.0"
+    id("dev.deftu.gradle.tools") version(dgtVersion)
+    id("dev.deftu.gradle.tools.publishing.maven") version(dgtVersion)
 }
-
-group = "dev.deftu"
-version = "0.2.2"
 
 repositories {
     mavenCentral()
@@ -37,43 +37,15 @@ dependencies {
 }
 
 tasks {
-    jar {
-        archiveBaseName.set("remap")
-    }
-
-    kotlin {
-        @Suppress("DEPRECATION")
+    withType<KotlinCompile> {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_1_8)
-            apiVersion.set(KotlinVersion.KOTLIN_1_5)
-            languageVersion.set(KotlinVersion.KOTLIN_1_5)
+            apiVersion.set(KotlinVersion.KOTLIN_1_8)
+            apiVersion.set(KotlinVersion.KOTLIN_1_8)
         }
     }
 
     test {
         useJUnitPlatform()
-    }
-}
-
-tasks.named<Jar>("jar") {
-    archiveBaseName.set("remap")
-}
-
-publishing {
-    publications {
-        create("maven", MavenPublication::class) {
-            from(components["java"])
-        }
-    }
-
-    val publishingUsername: String? = run {
-        return@run project.findProperty("deftu.publishing.username")?.toString() ?: System.getenv("DEFTU_PUBLISHING_USERNAME")
-    }
-
-tasks.withType<KotlinCompile> {
-    compilerOptions {
-        apiVersion.set(KotlinVersion.KOTLIN_1_8)
-        apiVersion.set(KotlinVersion.KOTLIN_1_8)
     }
 }
 
@@ -102,6 +74,7 @@ fun kotlinVersion(version: String, isPrimaryVersion: Boolean = false) {
             testClassesDirs = sourceSets.test.get().output.classesDirs
             classpath = testClasspath + sourceSets.test.get().output + sourceSets.main.get().output
         }
+
         tasks.check { dependsOn(testTask) }
     }
 }
