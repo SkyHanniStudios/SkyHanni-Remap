@@ -42,7 +42,7 @@ class ShortNameIndex(private val environment: KotlinCoreEnvironment) {
                 val fileName = file.nameWithoutExtension
                 val shortName = if ('$' in fileName) {
                     val innerName = fileName.substringAfterLast('$')
-                    if (!innerName.first().isJavaIdentifierStart()) {
+                    if (innerName.isEmpty() || !innerName.first().isJavaIdentifierStart()) {
                         return
                     }
                     innerName
