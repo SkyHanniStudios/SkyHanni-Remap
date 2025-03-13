@@ -1,3 +1,7 @@
+### This fork
+
+This fork adds support for patterns to semi work in kotlin files
+
 ### Remap
 To support multiple Minecraft versions with the ReplayMod, a preprocessor is used which transforms source code to compile against different Minecraft versions.
 
