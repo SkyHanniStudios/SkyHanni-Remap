@@ -1,10 +1,9 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version("2.0.0")
-    val dgtVersion = "2.5.0"
+    val dgtVersion = "2.22.0"
     id("dev.deftu.gradle.tools") version(dgtVersion)
     id("dev.deftu.gradle.tools.publishing.maven") version(dgtVersion)
 }
@@ -17,13 +16,10 @@ repositories {
 val testA by sourceSets.creating
 val testB by sourceSets.creating
 
-kotlinVersion("1.5.21", isPrimaryVersion = true)
-kotlinVersion("1.6.20")
-kotlinVersion("1.9.0")
 kotlinVersion("2.0.0")
 
 dependencies {
-    api("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.5.21")
+    api("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.0.0")
     implementation(kotlin("stdlib"))
     api("org.cadixdev:lorenz:0.5.8")
     runtimeOnly("net.java.dev.jna:jna:5.10.0") // don't strictly need this but IDEA spams log without

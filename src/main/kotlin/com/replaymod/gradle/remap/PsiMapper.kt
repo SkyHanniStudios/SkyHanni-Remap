@@ -35,16 +35,19 @@ import org.jetbrains.kotlin.synthetic.SyntheticJavaPropertyDescriptor
 import java.util.*
 
 internal class PsiMapper(
-        private val map: MappingSet,
-        private val remappedProject: Project?,
-        private val file: PsiFile,
-        private val bindingContext: BindingContext,
-        private val patterns: PsiPatterns?
+    private val map: MappingSet,
+    private val remappedProject: Project?,
+    private val file: PsiFile,
+    private val bindingContext: BindingContext,
+    private val patterns: PsiPatterns?,
+    private val patternMappings: List<PatternMapping>,
 ) {
     private val mixinMappings = mutableMapOf<String, ClassMapping<*, *>>()
     private val aliased = mutableSetOf<String>()
     private val errors = mutableListOf<Pair<Int, String>>()
     private val changes = TreeMap<TextRange, String>(compareBy<TextRange> { it.startOffset }.thenBy { it.endOffset })
+
+    private val neededImports = mutableSetOf<String>()
 
     private fun error(at: PsiElement, message: String) {
         val line = StringUtil.offsetToLineNumber(file.text, at.textOffset)
@@ -80,6 +83,22 @@ internal class PsiMapper(
         val before = changes.floorKey(range) ?: TextRange.EMPTY_RANGE
         val after = changes.ceilingKey(range) ?: TextRange.EMPTY_RANGE
         return !before.intersectsStrict(range) && !after.intersectsStrict(range)
+    }
+
+
+    private fun addNeededImports() {
+        if (neededImports.isEmpty()) return
+        if (file !is KtFile) return
+
+        val packageStatement = file.packageDirective ?: return
+        val packageText = packageStatement.text
+        val newPackageText = buildString {
+            append(packageText)
+            for (import in neededImports) {
+                append(" import $import")
+            }
+        }
+        replace(packageStatement, newPackageText)
     }
 
     private fun getResult(text: String): Pair<String, List<Pair<Int, String>>> {
@@ -311,12 +330,12 @@ internal class PsiMapper(
     }
 
     private fun findMapping(method: PsiMethod): MethodMapping? {
-        var declaringClass: PsiClass? = method.containingClass ?: return null
+        var declaringClass: PsiClass = method.containingClass ?: return null
         val parentQueue = ArrayDeque<PsiClass>()
         parentQueue.offer(declaringClass)
         var mapping: ClassMapping<*, *>? = null
 
-        var name = declaringClass!!.qualifiedName
+        var name = declaringClass.qualifiedName
         if (name != null) {
             // If this method is declared in a mixin class, we want to consider the hierarchy of the target as well
             mapping = mixinMappings[name]
@@ -332,13 +351,19 @@ internal class PsiMapper(
             if (mapping != null) {
                 val mapped = mapping.findMethodMapping(getSignature(method))
                 if (mapped != null) {
+
+                    patternMappings.forEach { patternMapping ->
+                        if (patternMapping.matches(declaringClass.qualifiedName, method.name)) {
+                            neededImports.add(patternMapping.neededImport)
+                        }
+                    }
+
                     return mapped
                 }
                 mapping = null
             }
             while (mapping == null) {
-                declaringClass = parentQueue.poll()
-                if (declaringClass == null) return null
+                declaringClass = parentQueue.poll() ?: return null
 
                 val superClass = declaringClass.superClass
                 if (superClass != null) {
@@ -786,6 +811,7 @@ internal class PsiMapper(
             }, null)
         }
 
+        addNeededImports()
         return getResult(file.text)
     }
 

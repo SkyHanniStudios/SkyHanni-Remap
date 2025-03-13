@@ -40,7 +40,7 @@ import java.nio.file.StandardOpenOption
 import java.util.*
 import kotlin.system.exitProcess
 
-class Transformer(private val map: MappingSet) {
+class Transformer(private val map: MappingSet, val patternMappings: List<PatternMapping> = emptyList()) {
     var classpath: Array<String>? = null
     var remappedClasspath: Array<String>? = null
     var jdkHome: File? = null
@@ -146,7 +146,7 @@ class Transformer(private val map: MappingSet) {
                 val psiFile = psiManager.findFile(file)!!
 
                 var (text, errors) = try {
-                    PsiMapper(map, remappedEnv?.project, psiFile, analysis.bindingContext, patterns).remapFile()
+                    PsiMapper(map, remappedEnv?.project, psiFile, analysis.bindingContext, patterns, patternMappings).remapFile()
                 } catch (e: Exception) {
                     throw RuntimeException("Failed to map file \"$name\".", e)
                 }
