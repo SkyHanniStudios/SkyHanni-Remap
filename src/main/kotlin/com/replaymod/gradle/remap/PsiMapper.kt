@@ -95,6 +95,8 @@ internal class PsiMapper(
         val newPackageText = buildString {
             append(packageText)
             for (import in neededImports) {
+                val importedFunctionPackage = import.substringBeforeLast(".").substringBeforeLast(".")
+                if (packageText == "package $importedFunctionPackage") continue
                 append(" import $import")
             }
         }
