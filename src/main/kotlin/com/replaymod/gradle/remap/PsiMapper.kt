@@ -85,7 +85,6 @@ internal class PsiMapper(
         return !before.intersectsStrict(range) && !after.intersectsStrict(range)
     }
 
-
     private fun addNeededImports() {
         if (neededImports.isEmpty()) return
         if (file !is KtFile) return
@@ -129,6 +128,11 @@ internal class PsiMapper(
         val mapped = mapping.findFieldMapping(fieldName)?.deobfuscatedName
         if (mapped == null || mapped == fieldName) return
         replaceIdentifier(expr, mapped)
+        patternMappings.forEach { patternMapping ->
+            if (patternMapping.matches(declaringClass.qualifiedName, fieldName)) {
+                neededImports.add(patternMapping.neededImport)
+            }
+        }
 
         if (expr is PsiJavaCodeReferenceElement
                 && !expr.isQualified // qualified access is fine
