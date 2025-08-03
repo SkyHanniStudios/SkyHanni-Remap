@@ -32,12 +32,10 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
-import java.lang.Exception
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.util.*
 import kotlin.system.exitProcess
 
 class Transformer(private val map: MappingSet, val patternMappings: List<PatternMapping> = emptyList()) {
@@ -51,15 +49,21 @@ class Transformer(private val map: MappingSet, val patternMappings: List<Pattern
 
     @Throws(IOException::class)
     fun remap(sources: Map<String, String>): Map<String, Pair<String, List<Pair<Int, String>>>> =
-            remap(sources, emptyMap())
+        remap(sources, emptyMap(), emptyMap())
 
     @Throws(IOException::class)
-    fun remap(sources: Map<String, String>, processedSources: Map<String, String>): Map<String, Pair<String, List<Pair<Int, String>>>> {
+    fun remap(
+        sources: Map<String, String>,
+        referenceSources: Map<String, String>,
+        processedSources: Map<String, String>,
+    ): Map<String, Pair<String, List<Pair<Int, String>>>> {
         val tmpDir = Files.createTempDirectory("remap")
         val processedTmpDir = Files.createTempDirectory("remap-processed")
         val disposable = Disposer.newDisposable()
         try {
-            for ((unitName, source) in sources) {
+            val combinedSource = referenceSources.plus(sources)
+
+            for ((unitName, source) in combinedSource) {
                 val path = tmpDir.resolve(unitName)
                 Files.createDirectories(path.parent)
                 Files.write(path, source.toByteArray(StandardCharsets.UTF_8), StandardOpenOption.CREATE)
@@ -72,12 +76,17 @@ class Transformer(private val map: MappingSet, val patternMappings: List<Pattern
 
             val config = CompilerConfiguration()
             config.put(CommonConfigurationKeys.MODULE_NAME, "main")
-            jdkHome?.let {config.setupJdk(it) }
+            jdkHome?.let { config.setupJdk(it) }
             config.add<ContentRoot>(CLIConfigurationKeys.CONTENT_ROOTS, JavaSourceRoot(tmpDir.toFile(), ""))
             val kotlinSourceRoot = createSourceRoot(tmpDir, false)
             config.add<ContentRoot>(CLIConfigurationKeys.CONTENT_ROOTS, kotlinSourceRoot)
-            config.addAll<ContentRoot>(CLIConfigurationKeys.CONTENT_ROOTS, classpath!!.map { JvmClasspathRoot(File(it)) })
-            config.put<MessageCollector>(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, PrintingMessageCollector(System.err, MessageRenderer.GRADLE_STYLE, verboseCompilerMessages))
+            config.addAll<ContentRoot>(
+                CLIConfigurationKeys.CONTENT_ROOTS,
+                classpath!!.map { JvmClasspathRoot(File(it)) })
+            config.put<MessageCollector>(
+                CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY,
+                PrintingMessageCollector(System.err, MessageRenderer.GRADLE_STYLE, verboseCompilerMessages)
+            )
 
             // Our PsiMapper only works with the PSI tree elements, not with the faster (but kotlin-specific) classes
             config.put(JVMConfigurationKeys.USE_PSI_CLASS_FILES_READING, true)
@@ -93,22 +102,28 @@ class Transformer(private val map: MappingSet, val patternMappings: List<Pattern
             loadedField.set(Registry.getInstance(), true)
 
             val environment = KotlinCoreEnvironment.createForProduction(
-                    disposable,
-                    config,
-                    EnvironmentConfigFiles.JVM_CONFIG_FILES
+                disposable,
+                config,
+                EnvironmentConfigFiles.JVM_CONFIG_FILES
             )
+
             @Suppress("DEPRECATION")
             val rootArea = Extensions.getRootArea()
             synchronized(rootArea) {
                 if (!rootArea.hasExtensionPoint(CustomExceptionHandler.KEY)) {
-                    rootArea.registerExtensionPoint(CustomExceptionHandler.KEY.name, CustomExceptionHandler::class.java.name, ExtensionPoint.Kind.INTERFACE)
+                    rootArea.registerExtensionPoint(
+                        CustomExceptionHandler.KEY.name,
+                        CustomExceptionHandler::class.java.name,
+                        ExtensionPoint.Kind.INTERFACE
+                    )
                 }
             }
 
             val project = environment.project as MockProject
             val psiManager = PsiManager.getInstance(project)
-            val vfs = VirtualFileManager.getInstance().getFileSystem(StandardFileSystems.FILE_PROTOCOL) as CoreLocalFileSystem
-            val virtualFiles = sources.mapValues { vfs.findFileByIoFile(tmpDir.resolve(it.key).toFile())!! }
+            val vfs =
+                VirtualFileManager.getInstance().getFileSystem(StandardFileSystems.FILE_PROTOCOL) as CoreLocalFileSystem
+            val virtualFiles = combinedSource.mapValues { vfs.findFileByIoFile(tmpDir.resolve(it.key).toFile())!! }
             val psiFiles = virtualFiles.mapValues { psiManager.findFile(it.value)!! }
             val ktFiles = psiFiles.values.filterIsInstance<KtFile>()
 
@@ -146,7 +161,14 @@ class Transformer(private val map: MappingSet, val patternMappings: List<Pattern
                 val psiFile = psiManager.findFile(file)!!
 
                 var (text, errors) = try {
-                    PsiMapper(map, remappedEnv?.project, psiFile, analysis.bindingContext, patterns, patternMappings).remapFile()
+                    PsiMapper(
+                        map,
+                        remappedEnv?.project,
+                        psiFile,
+                        analysis.bindingContext,
+                        patterns,
+                        patternMappings
+                    ).remapFile()
                 } catch (e: Exception) {
                     throw RuntimeException("Failed to map file \"$name\".", e)
                 }
@@ -175,7 +197,11 @@ class Transformer(private val map: MappingSet, val patternMappings: List<Pattern
         }
     }
 
-    private fun setupRemappedProject(disposable: Disposable, classpath: Array<String>, sourceRoot: Path): KotlinCoreEnvironment {
+    private fun setupRemappedProject(
+        disposable: Disposable,
+        classpath: Array<String>,
+        sourceRoot: Path,
+    ): KotlinCoreEnvironment {
         val config = CompilerConfiguration()
         (remappedJdkHome ?: jdkHome)?.let { config.setupJdk(it) }
         config.put(CommonConfigurationKeys.MODULE_NAME, "main")
@@ -183,7 +209,10 @@ class Transformer(private val map: MappingSet, val patternMappings: List<Pattern
         if (manageImports) {
             config.add(CLIConfigurationKeys.CONTENT_ROOTS, JavaSourceRoot(sourceRoot.toFile(), ""))
         }
-        config.put(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, PrintingMessageCollector(System.err, MessageRenderer.GRADLE_STYLE, verboseCompilerMessages))
+        config.put(
+            CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY,
+            PrintingMessageCollector(System.err, MessageRenderer.GRADLE_STYLE, verboseCompilerMessages)
+        )
 
         val environment = KotlinCoreEnvironment.createForProduction(
             disposable,
